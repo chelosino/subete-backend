@@ -41,22 +41,22 @@ app.get('/auth/callback', async (req, res) => {
       client_secret: SHOPIFY_API_SECRET,
       code,
     });
-
+console.log("1");
     const accessToken = tokenRes.data.access_token;
-
+console.log(accessToken);
     // ✅ GUARDAR EN SUPABASE
     await supabase.from('shops').upsert({ shop, access_token: accessToken });
-
+console.log("2");
     // 🔍 OBTENER THEME PRINCIPAL
     const themes = await axios.get(`https://${shop}/admin/api/2023-10/themes.json`, {
       headers: {
         'X-Shopify-Access-Token': accessToken,
       }
     });
-
+console.log("3");
     const mainTheme = themes.data.themes.find(t => t.role === 'main');
     const themeId = mainTheme.id;
-
+console.log("4");
     // 🧩 CREAR SNIPPET LIQUID
     await axios.put(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
       asset: {
@@ -68,7 +68,7 @@ app.get('/auth/callback', async (req, res) => {
         'X-Shopify-Access-Token': accessToken
       }
     });
-
+console.log("5");
     // 🧷 INSERTAR EN THEME.LIQUID
     const layoutAsset = await axios.get(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
       headers: {
@@ -78,13 +78,13 @@ app.get('/auth/callback', async (req, res) => {
         'asset[key]': 'layout/theme.liquid'
       }
     });
-
+console.log("6");
     let themeLiquid = layoutAsset.data.asset.value;
     const snippetCall = `{% render 'subete_widget' %}`;
-
+console.log("7");
     if (!themeLiquid.includes(snippetCall)) {
       themeLiquid = themeLiquid.replace('</body>', `  ${snippetCall}\n</body>`);
-
+console.log("8");
       await axios.put(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
         asset: {
           key: 'layout/theme.liquid',
@@ -96,7 +96,7 @@ app.get('/auth/callback', async (req, res) => {
         }
       });
     }
-
+console.log("9");
     res.send("✅ ¡Widget instalado correctamente!");
   } catch (err) {
     console.error("❌ Error en callback:", err.response?.data || err.message);
