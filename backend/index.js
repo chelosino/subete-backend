@@ -33,31 +33,14 @@ app.get('/auth', (req, res) => {
 app.get('/auth/callback', async (req, res) => {
   const { shop, code } = req.query;
   if (!shop || !code) return res.status(400).send('Missing params');
-
-  console.log("Recibido en /auth/callback:", req.query);
-
+  
   try {
-
-    console.log("Credenciales:", {
-  key: SHOPIFY_API_KEY,
-  secret: SHOPIFY_API_SECRET
-});
-
-    console.log("Solicitando token a:", `https://${shop}/admin/oauth/access_token`);
     
-    const tokenRes = await axios.post(
-      `https://${shop}/admin/oauth/access_token`,
-      {
-        client_id: SHOPIFY_API_KEY,
-        client_secret: SHOPIFY_API_SECRET,
-        code,
-      },
-      {
-        headers: {
-          'Content-Type': 'application/json'
-        }
-      }
-    );
+    const tokenRes = await axios.post(`https://${shop}/admin/oauth/access_token`, {
+      client_id: SHOPIFY_API_KEY,
+      client_secret: SHOPIFY_API_SECRET,
+      code,
+    });
 
     const accessToken = tokenRes.data.access_token;
 
