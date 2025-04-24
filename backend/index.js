@@ -99,7 +99,9 @@ console.log("8");
 console.log("9");
     res.send("✅ ¡Widget instalado correctamente!");
   } catch (err) {
-    console.error("❌ Error en callback:", err.response?.data || err.message);
+    console.error("❌ Error en callback:");
+    console.error("➡️ Mensaje:", err.message);
+    console.error("➡️ Shopify responde:", err.response?.data || err.response || err);
     res.status(500).send("Error autenticando con Shopify");
   }
 });
