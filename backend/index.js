@@ -53,8 +53,12 @@ console.log("2");
         'X-Shopify-Access-Token': accessToken,
       }
     });
-console.log("3");
+console.log("🧵 Themes recibidos:", themes.data.themes);
     const mainTheme = themes.data.themes.find(t => t.role === 'main');
+    if (!mainTheme) {
+      console.error("❌ No se encontró un theme principal para la tienda.");
+      return res.status(400).send("No se encontró un theme principal.");
+    }
     const themeId = mainTheme.id;
 console.log("4");
     // 🧩 CREAR SNIPPET LIQUID
