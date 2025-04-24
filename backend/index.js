@@ -51,6 +51,7 @@ console.log("2");
     const themes = await axios.get(`https://${shop}/admin/api/2023-10/themes.json`, {
       headers: {
         'X-Shopify-Access-Token': accessToken,
+        'Content-Type': 'application/json'
       }
     });
 console.log("🧵 Themes recibidos:", themes.data.themes);
