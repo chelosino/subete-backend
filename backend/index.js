@@ -38,6 +38,11 @@ app.get('/auth/callback', async (req, res) => {
 
   try {
 
+    console.log("Credenciales:", {
+  key: SHOPIFY_API_KEY,
+  secret: SHOPIFY_API_SECRET
+});
+
     console.log("Solicitando token a:", `https://${shop}/admin/oauth/access_token`);
     
     const tokenRes = await axios.post(
