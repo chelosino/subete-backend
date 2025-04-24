@@ -61,7 +61,7 @@ console.log("4");
     await axios.put(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
       asset: {
         key: 'snippets/subete_widget.liquid',
-        value: `<iframe src="${FRONTEND_URL}?shop=${shop}" style="width:100%;height:600px;border:none;"></iframe>`
+        value: `<script src="${FRONTEND_URL}/embed.js" defer></script>`
       }
     }, {
       headers: {
