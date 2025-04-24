@@ -37,11 +37,22 @@ app.get('/auth/callback', async (req, res) => {
   console.log("Recibido en /auth/callback:", req.query);
 
   try {
-    const tokenRes = await axios.post(`https://${shop}/admin/oauth/access_token`, {
-      client_id: SHOPIFY_API_KEY,
-      client_secret: SHOPIFY_API_SECRET,
-      code,
-    });
+
+    console.log("Solicitando token a:", `https://${shop}/admin/oauth/access_token`);
+    
+    const tokenRes = await axios.post(
+      `https://${shop}/admin/oauth/access_token`,
+      {
+        client_id: SHOPIFY_API_KEY,
+        client_secret: SHOPIFY_API_SECRET,
+        code,
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      }
+    );
 
     const accessToken = tokenRes.data.access_token;
 
