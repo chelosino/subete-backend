@@ -110,6 +110,24 @@ console.log("9");
     res.status(500).send("Error autenticando con Shopify");
   }
 });
+app.get("/", (req, res) => {
+  const { shop } = req.query;
+
+  if (!shop) return res.status(400).send("Falta parámetro 'shop'");
+
+  res.send(`
+    <html>
+      <body>
+        <h2>✅ App "Súbete al carro" está instalada para ${shop}</h2>
+        <p>La integración fue exitosa.</p>
+        <script>
+          window.location.href = "${FRONTEND_URL}/widget?shop=${shop}";
+        </script>
+      </body>
+    </html>
+  `);
+});
+
 
 app.listen(port, () => {
   console.log(`Servidor Shopify backend corriendo en http://localhost:${port}`);
