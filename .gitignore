@@ -1,0 +1,28 @@
+# Node
+node_modules/
+dist/
+.env
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+log/
+logs/
+
+# System
+.DS_Store
+Thumbs.db
+
+# Vercel / Render
+.vercel/
+.env.local
+.env.*.local
+
+# TypeScript
+*.tsbuildinfo
+
+# Editor
+.vscode/
+.idea/
