@@ -34,6 +34,8 @@ app.get('/auth/callback', async (req, res) => {
   const { shop, code } = req.query;
   if (!shop || !code) return res.status(400).send('Missing params');
 
+  console.log("Recibido en /auth/callback:", req.query);
+
   try {
     const tokenRes = await axios.post(`https://${shop}/admin/oauth/access_token`, {
       client_id: SHOPIFY_API_KEY,
