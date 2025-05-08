@@ -189,7 +189,7 @@ router.get("/api/participants", async (req, res) => {
     const { data, error } = await supabase
       .from("participants")
       .select("*")
-      .eq("campaign_id", campaign_id)
+      //.eq("campaign_id", campaign_id)
       .order("created_at");
 
     if (error) {
