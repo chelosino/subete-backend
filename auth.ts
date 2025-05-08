@@ -180,15 +180,30 @@ router.get("/api/campaigns/:id", async (req, res) => {
 
 router.get("/api/participants", async (req, res) => {
   const { campaign_id } = req.query;
-  
-  const { data, error } = await supabase
-    .from("participants")
-    .select("*")
-    .eq("campaign_id", campaign_id)
-    .order("created_at");
 
-  if (error) return res.status(500).json({ error: "No se encontraron participantes" });
-  return res.json(data);
+  if (!campaign_id || typeof campaign_id !== "string") {
+    return res.status(400).json({ error: "Missing campaign_id parameter" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("participants")
+      .select("*")
+      .eq("campaign_id", campaign_id)
+      .order("created_at");
+
+    if (error) {
+      console.error("❌ Supabase error:", error);
+      return res.status(500).json({ error: "Supabase query error" });
+    }
+
+    // ✅ Siempre responder con un array
+    return res.status(200).json(data || []);
+  } catch (err) {
+    console.error("❌ Unexpected error:", err);
+    return res.status(500).json({ error: "Unexpected server error" });
+  }
 });
+
 
 export default router;
