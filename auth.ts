@@ -138,5 +138,30 @@ router.post('/api/create-campaign', async (req, res) => {
   }
 });
 
+router.get("/api/campaigns", async (req, res) => {
+  const { shop } = req.query;
+
+  if (!shop || typeof shop !== "string") {
+    return res.status(400).json({ error: "Parámetro 'shop' requerido" });
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("campaigns")
+      .select("*")
+      .eq("shop", shop)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      console.error("❌ Error al obtener campañas:", error);
+      return res.status(500).json({ error: "Error en Supabase" });
+    }
+
+    return res.status(200).json(data);
+  } catch (err) {
+    console.error("❌ Error inesperado:", err);
+    return res.status(500).json({ error: "Error del servidor" });
+  }
+});
 
 export default router;
