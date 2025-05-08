@@ -181,13 +181,12 @@ router.get("/api/campaigns/:id", async (req, res) => {
 
 router.get("/api/participants", async (req, res) => {
   const { campaign_id } = req.query;
-
-  console.log("🔍 campaign_id recibido:", campaign_id);
-
+  console.log("📥 GET /api/participants llamado con:", campaign_id);
+  console.log("🔍 Buscando participants para:", campaign_id);
   const { data, error } = await supabase
     .from("participants")
     .select("*")
-    .ilike("campaign_id", `%${campaign_id}%`)
+    .eq("campaign_id", campaign_id)
     .order("created_at");
 
   if (error) return res.status(500).json({ error: "No se encontraron participantes" });
