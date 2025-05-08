@@ -108,22 +108,21 @@ router.get('/auth/callback', async (req, res) => {
 });
 
 router.post('/api/create-campaign', async (req, res) => {
-  const { nombre, meta, shop } = req.body;
+  const { name, goal, shop } = req.body;
 
-  if (!nombre || !meta || !shop) {
+  if (!name || !goal || !shop) {
     return res.status(400).json({ error: "Faltan campos requeridos" });
   }
 
-  if (!nombre || !meta) {
+  if (!name || !goal) {
     return res.status(400).json({ error: "Faltan campos requeridos" });
   }
 
   try {
     const { error } = await supabase.from("campaigns").insert({
-      nombre,
-      meta,
+      name,
+      goal,
       shop
-      // opcional: podrías agregar el campo shop, si querés relacionar campañas a tiendas
     });
 
     if (error) {
