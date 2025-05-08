@@ -182,6 +182,8 @@ router.get("/api/campaigns/:id", async (req, res) => {
 router.get("/api/participants", async (req, res) => {
   const { campaign_id } = req.query;
 
+  console.log("🔍 campaign_id recibido:", campaign_id);
+
   const { data, error } = await supabase
     .from("participants")
     .select("*")
