@@ -192,12 +192,26 @@ router.get("/api/participants", async (req, res) => {
 
   const { data, error } = await supabase
     .from("participants")
-    .select("*")
-    .eq("campaign_id", campaign_id);
+    .select("id, joined_at, clients(name, email)")
+    .eq("campaign_id", campaign_id)
+    .order("joined_at");
 
-  if (error) return res.status(500).json({ error: "Error al obtener participantes" });
-  return res.status(200).json(data);
+  if (error) {
+    console.error("❌ Error fetching participants:", error);
+    return res.status(500).json({ error: "No se encontraron participantes" });
+  }
+
+  // Transformar respuesta para que sea más amigable en el frontend
+  const parsed = data.map((p) => ({
+    id: p.id,
+    name: p.clients?.name,
+    email: p.clients?.email,
+    joined_at: p.joined_at,
+  }));
+
+  return res.json(parsed);
 });
+
 
 // ✅ Registrar participante
 router.post("/api/participants", async (req, res) => {
