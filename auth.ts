@@ -164,4 +164,32 @@ router.get("/api/campaigns", async (req, res) => {
   }
 });
 
+router.get("/api/campaigns/:id", async (req, res) => {
+  const { id } = req.params;
+  const { shop } = req.query;
+
+  const { data, error } = await supabase
+    .from("campaigns")
+    .select("*")
+    .eq("id", id)
+    .eq("shop", shop)
+    .single();
+
+  if (error) return res.status(500).json({ error: "No se encontró la campaña" });
+  return res.json(data);
+});
+
+router.get("/api/participants", async (req, res) => {
+  const { campaign_id } = req.query;
+
+  const { data, error } = await supabase
+    .from("participants")
+    .select("*")
+    .eq("campaign_id", campaign_id)
+    .order("created_at");
+
+  if (error) return res.status(500).json({ error: "No se encontraron participantes" });
+  return res.json(data);
+});
+
 export default router;
