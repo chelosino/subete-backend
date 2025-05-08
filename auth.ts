@@ -187,7 +187,7 @@ router.get("/api/participants", async (req, res) => {
   const { data, error } = await supabase
     .from("participants")
     .select("*")
-    .eq("campaign_id", campaign_id)
+    .ilike("campaign_id", `%${campaign_id}%`)
     .order("created_at");
 
   if (error) return res.status(500).json({ error: "No se encontraron participantes" });
