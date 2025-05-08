@@ -322,4 +322,95 @@ router.post("/api/participants", async (req, res) => {
   return res.status(200).json({ message: "Participant added successfully" });
 });
 
+router.delete("/api/campaigns/:id", async (req, res) => {
+  const { id } = req.params;
+  const { shop } = req.query;
+
+  if (!id || !shop || typeof shop !== "string") {
+    return res.status(400).json({ error: "Missing campaign ID or shop" });
+  }
+
+  const shopId = await getShopId(shop);
+  if (!shopId) {
+    return res.status(403).json({ error: "Unauthorized shop" });
+  }
+
+  // Verificar que la campaña pertenece a la tienda
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("id", id)
+    .eq("shop_id", shopId)
+    .single();
+
+  if (!campaign) {
+    return res.status(404).json({ error: "Campaign not found or not authorized" });
+  }
+
+  // Eliminar la campaña
+  const { error } = await supabase
+    .from("campaigns")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    console.error("❌ Error deleting campaign:", error);
+    return res.status(500).json({ error: "Failed to delete campaign" });
+  }
+
+  return res.status(200).json({ message: "Campaign deleted" });
+});
+
+import { Parser } from "json2csv";
+
+router.get("/api/campaigns/:id/export", async (req, res) => {
+  const { id } = req.params;
+  const { shop } = req.query;
+
+  if (!id || !shop || typeof shop !== "string") {
+    return res.status(400).json({ error: "Missing campaign ID or shop" });
+  }
+
+  const shopId = await getShopId(shop);
+  if (!shopId) {
+    return res.status(403).json({ error: "Unauthorized shop" });
+  }
+
+  // Verificar campaña
+  const { data: campaign } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("id", id)
+    .eq("shop_id", shopId)
+    .single();
+
+  if (!campaign) {
+    return res.status(404).json({ error: "Campaign not found or not authorized" });
+  }
+
+  // Obtener participantes + datos de cliente
+  const { data: participants, error } = await supabase
+    .from("participants")
+    .select("joined_at, clients(name, email)")
+    .eq("campaign_id", id);
+
+  if (error) {
+    return res.status(500).json({ error: "Error fetching participants" });
+  }
+
+  // Armar CSV
+  const rows = participants.map((p) => ({
+    name: p.clients?.name,
+    email: p.clients?.email,
+    joined_at: p.joined_at,
+  }));
+
+  const parser = new Parser({ fields: ["name", "email", "joined_at"] });
+  const csv = parser.parse(rows);
+
+  res.header("Content-Type", "text/csv");
+  res.attachment(`campaign-${id}-participants.csv`);
+  res.send(csv);
+});
+
 export default router;
