@@ -3,6 +3,7 @@ dotenv.config();
 import express from 'express';
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
+import bodyParser from "body-parser";
 
 const router = express.Router();
 
