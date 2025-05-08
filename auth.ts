@@ -18,6 +18,21 @@ const {
 
 const supabase = createClient(SUPABASE_URL!, SUPABASE_KEY!);
 
+async function getShopId(shopDomain: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("shops")
+    .select("id")
+    .eq("shop", shopDomain)
+    .single();
+
+  if (error || !data) {
+    console.error("❌ Shop lookup failed:", error);
+    return null;
+  }
+
+  return data.id;
+}
+
 // 🔐 Inicio OAuth
 router.get('/auth', (req, res) => {
   const { shop } = req.query;
@@ -100,39 +115,30 @@ router.get('/auth/callback', async (req, res) => {
 });
 
 // 🧩 Crear campaña
-router.post('/api/create-campaign', async (req, res) => {
+router.post("/api/create-campaign", async (req, res) => {
   const { name, goal, shop } = req.body;
+
   if (!name || !goal || !shop) {
-    return res.status(400).json({ error: "Faltan campos requeridos" });
+    return res.status(400).json({ error: "Missing fields: name, goal or shop" });
   }
 
-  try {
-    const { data: shopData, error: shopError } = await supabase
-      .from("shops")
-      .select("id")
-      .eq("shop", shop)
-      .single();
-
-    if (shopError || !shopData) {
-      return res.status(404).json({ error: "Tienda no registrada" });
-    }
-
-    const { error: insertError } = await supabase.from("campaigns").insert({
-      name,
-      goal,
-      shop_id: shopData.id
-    });
-
-    if (insertError) {
-      console.error("❌ Error al insertar campaña:", insertError);
-      return res.status(500).json({ error: "Error al crear campaña" });
-    }
-
-    return res.status(200).json({ message: "Campaña creada" });
-  } catch (err) {
-    console.error("❌ Error inesperado:", err);
-    return res.status(500).json({ error: "Error del servidor" });
+  const shopId = await getShopId(shop);
+  if (!shopId) {
+    return res.status(403).json({ error: "Unauthorized shop" });
   }
+
+  const { error } = await supabase.from("campaigns").insert({
+    name,
+    goal,
+    shop_id: shopId,
+  });
+
+  if (error) {
+    console.error("❌ Error creating campaign:", error);
+    return res.status(500).json({ error: "Failed to create campaign" });
+  }
+
+  return res.status(200).json({ message: "Campaign created successfully" });
 });
 
 // 🧾 Obtener campañas por tienda
@@ -175,21 +181,57 @@ router.get("/api/campaigns", async (req, res) => {
 // 🔍 Obtener campaña por ID
 router.get("/api/campaigns/:id", async (req, res) => {
   const { id } = req.params;
+  const { shop } = req.query;
 
-  const { data, error } = await supabase
+  if (!id || !shop || typeof shop !== "string") {
+    return res.status(400).json({ error: "Missing or invalid parameters" });
+  }
+
+  const shopId = await getShopId(shop);
+  if (!shopId) {
+    return res.status(403).json({ error: "Unauthorized shop" });
+  }
+
+  const { data: campaign, error } = await supabase
     .from("campaigns")
     .select("*")
     .eq("id", id)
+    .eq("shop_id", shopId)
     .single();
 
-  if (error) return res.status(404).json({ error: "Campaña no encontrada" });
-  return res.status(200).json(data);
+  if (error || !campaign) {
+    return res.status(404).json({ error: "Campaign not found or not authorized" });
+  }
+
+  return res.status(200).json(campaign);
 });
 
 // 👥 Participantes por campaña
 router.get("/api/participants", async (req, res) => {
-  const { campaign_id } = req.query;
+  const { campaign_id, shop } = req.query;
 
+  if (!campaign_id || !shop || typeof shop !== "string") {
+    return res.status(400).json({ error: "Missing campaign_id or shop" });
+  }
+
+  const shopId = await getShopId(shop);
+  if (!shopId) {
+    return res.status(403).json({ error: "Unauthorized shop" });
+  }
+
+  // Verificar que la campaña pertenezca a esa tienda
+  const { data: campaign, error: campaignError } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("id", campaign_id)
+    .eq("shop_id", shopId)
+    .single();
+
+  if (campaignError || !campaign) {
+    return res.status(404).json({ error: "Campaign not found or unauthorized" });
+  }
+
+  // Traer participantes + nombre/email de cliente
   const { data, error } = await supabase
     .from("participants")
     .select("id, joined_at, clients(name, email)")
@@ -198,73 +240,86 @@ router.get("/api/participants", async (req, res) => {
 
   if (error) {
     console.error("❌ Error fetching participants:", error);
-    return res.status(500).json({ error: "No se encontraron participantes" });
+    return res.status(500).json({ error: "Error loading participants" });
   }
 
-  // Transformar respuesta para que sea más amigable en el frontend
-  const parsed = data.map((p) => ({
+  // Formatear respuesta
+  const participants = data.map((p) => ({
     id: p.id,
     name: p.clients?.name,
     email: p.clients?.email,
     joined_at: p.joined_at,
   }));
 
-  return res.json(parsed);
+  return res.status(200).json(participants);
 });
-
 
 // ✅ Registrar participante
 router.post("/api/participants", async (req, res) => {
-  const { email, name, campaign_id } = req.body;
+  const { email, name, campaign_id, shop } = req.body;
 
-  if (!email || !name || !campaign_id) {
+  if (!email || !name || !campaign_id || !shop) {
     return res.status(400).json({ error: "Missing fields" });
   }
 
-  try {
-    const { data: existingClient } = await supabase
+  const shopId = await getShopId(shop);
+  if (!shopId) {
+    return res.status(403).json({ error: "Unauthorized shop" });
+  }
+
+  // Verificar que la campaña pertenezca al shop
+  const { data: campaign, error: campaignError } = await supabase
+    .from("campaigns")
+    .select("id")
+    .eq("id", campaign_id)
+    .eq("shop_id", shopId)
+    .single();
+
+  if (campaignError || !campaign) {
+    return res.status(404).json({ error: "Campaign not found or unauthorized" });
+  }
+
+  // Buscar o crear el cliente
+  const { data: existingClient } = await supabase
+    .from("clients")
+    .select("*")
+    .eq("email", email)
+    .single();
+
+  let client_id: string;
+
+  if (existingClient) {
+    client_id = existingClient.id;
+  } else {
+    const { data: newClient, error: insertErr } = await supabase
       .from("clients")
-      .select("*")
-      .eq("email", email)
+      .insert({ email, name })
+      .select()
       .single();
 
-    let client_id: string;
-
-    if (existingClient) {
-      client_id = existingClient.id;
-    } else {
-      const { data: newClient, error: insertErr } = await supabase
-        .from("clients")
-        .insert({ email, name })
-        .select()
-        .single();
-
-      if (insertErr || !newClient) {
-        console.error("❌ Error inserting client:", insertErr);
-        return res.status(500).json({ error: "Failed to create client" });
-      }
-
-      client_id = newClient.id;
+    if (insertErr || !newClient) {
+      console.error("❌ Error creating client:", insertErr);
+      return res.status(500).json({ error: "Failed to create client" });
     }
 
-    const { error: participantErr } = await supabase
-      .from("participants")
-      .insert({ client_id, campaign_id });
-
-    if (participantErr) {
-      if (participantErr.code === "23505") {
-        return res.status(409).json({ error: "Already joined this campaign" });
-      }
-
-      console.error("❌ Error inserting participant:", participantErr);
-      return res.status(500).json({ error: "Failed to join campaign" });
-    }
-
-    return res.status(200).json({ message: "Joined campaign successfully" });
-  } catch (err) {
-    console.error("❌ Unexpected error:", err);
-    return res.status(500).json({ error: "Unexpected server error" });
+    client_id = newClient.id;
   }
+
+  // Insertar participante
+  const { error: participantErr } = await supabase
+    .from("participants")
+    .insert({ client_id, campaign_id });
+
+  if (participantErr) {
+    if (participantErr.code === "23505") {
+      return res.status(409).json({ error: "Already joined this campaign" });
+    }
+
+    console.error("❌ Error inserting participant:", participantErr);
+    return res.status(500).json({ error: "Failed to join campaign" });
+  }
+
+  return res.status(200).json({ message: "Participant added successfully" });
 });
 
 export default router;
