@@ -4,6 +4,15 @@ import express from 'express';
 import axios from 'axios';
 import { createClient } from '@supabase/supabase-js';
 import bodyParser from "body-parser";
+import cors from "cors";
+
+const corsOptions = {
+  origin: "https://subete-frontend.vercel.app", // 🔁 Cambia esto si usás otro dominio
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type"],
+};
+
+app.use(cors(corsOptions));
 
 const router = express.Router();
 

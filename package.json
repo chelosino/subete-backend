@@ -3,26 +3,23 @@
     "version": "1.0.0",
     "description": "",
     "main": "index.js",
-    "scripts":
-    {
+    "scripts": {
         "test": "echo \"Error: no test specified\" && exit 1",
         "dev": "nodemon --exec tsx index.ts",
         "start": "tsx index.ts"
     },
-    "keywords":
-    [],
+    "keywords": [],
     "author": "",
     "license": "ISC",
     "type": "commonjs",
-    "dependencies":
-    {
+    "dependencies": {
         "@supabase/supabase-js": "^2.49.4",
         "axios": "^1.9.0",
+        "cors": "^2.8.5",
         "dotenv": "^16.5.0",
         "express": "^5.1.0"
     },
-    "devDependencies":
-    {
+    "devDependencies": {
         "@types/express": "^5.0.1",
         "nodemon": "^3.1.10",
         "tsx": "^4.19.3",
