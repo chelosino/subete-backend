@@ -54,33 +54,42 @@ router.get('/auth/callback', async (req, res) => {
 
     const themeId = mainTheme.id;
 
-    await axios.put(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
-      asset: {
-        key: 'snippets/subete_widget.liquid',
-        value: `<script src="${FRONTEND_URL}/embed.js" defer></script>`
-      }
-    }, {
-      headers: { 'X-Shopify-Access-Token': accessToken }
-    });
-
-    const layoutAsset = await axios.get(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
-      headers: { 'X-Shopify-Access-Token': accessToken },
-      params: { 'asset[key]': 'layout/theme.liquid' }
-    });
-
-    let themeLiquid = layoutAsset.data.asset.value;
-    const snippetCall = `{% render 'subete_widget' %}`;
-
-    if (!themeLiquid.includes(snippetCall)) {
-      themeLiquid = themeLiquid.replace('</body>', `  ${snippetCall}\n</body>`);
+    try {
       await axios.put(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
         asset: {
-          key: 'layout/theme.liquid',
-          value: themeLiquid
+          key: 'snippets/subete_widget.liquid',
+          value: `<script src="${FRONTEND_URL}/embed.js" defer></script>`
         }
       }, {
         headers: { 'X-Shopify-Access-Token': accessToken }
       });
+    } catch (err: any) {
+      console.warn("⚠️ No se pudo crear el snippet:", err.response?.data || err.message);
+    }
+
+    try {
+      const layoutAsset = await axios.get(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
+        headers: { 'X-Shopify-Access-Token': accessToken },
+        params: { 'asset[key]': 'layout/theme.liquid' }
+      });
+
+      let themeLiquid = layoutAsset.data.asset.value;
+      const snippetCall = `{% render 'subete_widget' %}`;
+
+      if (!themeLiquid.includes(snippetCall)) {
+        themeLiquid = themeLiquid.replace('</body>', `  ${snippetCall}\n</body>`);
+
+        await axios.put(`https://${shop}/admin/api/2023-10/themes/${themeId}/assets.json`, {
+          asset: {
+            key: 'layout/theme.liquid',
+            value: themeLiquid
+          }
+        }, {
+          headers: { 'X-Shopify-Access-Token': accessToken }
+        });
+      }
+    } catch (err: any) {
+      console.warn("⚠️ No se pudo modificar theme.liquid:", err.response?.data || err.message);
     }
 
     res.send("✅ ¡App instalada y widget insertado!");
