@@ -413,4 +413,33 @@ router.get("/api/campaigns/:id/export", async (req, res) => {
   res.send(csv);
 });
 
+router.get("/api/campaigns/by-product", async (req, res) => {
+  const { shop, product_id } = req.query;
+
+  if (!shop || !product_id || typeof shop !== "string" || typeof product_id !== "string") {
+    return res.status(400).json({ error: "Missing or invalid parameters" });
+  }
+
+  const shopId = await getShopId(shop);
+  if (!shopId) {
+    return res.status(403).json({ error: "Unauthorized shop" });
+  }
+
+  // Buscar campaña activa asociada al producto para esa tienda
+  const { data: campaign, error } = await supabase
+    .from("campaigns")
+    .select("*")
+    .eq("shop_id", shopId)
+    .eq("product_id", product_id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  if (error || !campaign) {
+    return res.status(404).json({ error: "No active campaign found for this product" });
+  }
+
+  return res.status(200).json(campaign);
+});
+
 export default router;
