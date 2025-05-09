@@ -115,30 +115,53 @@ router.get('/auth/callback', async (req, res) => {
 });
 
 // 🧩 Crear campaña
-router.post("/api/create-campaign", async (req, res) => {
-  const { name, goal, shop } = req.body;
+router.post('/api/create-campaign', async (req, res) => {
+  const { name, goal, shop, product_id, discount_percentage } = req.body;
 
-  if (!name || !goal || !shop) {
-    return res.status(400).json({ error: "Missing fields: name, goal or shop" });
+  if (!name || !goal || !shop || !product_id || !discount_percentage) {
+    return res.status(400).json({ error: "Missing required fields" });
   }
 
-  const shopId = await getShopId(shop);
-  if (!shopId) {
-    return res.status(403).json({ error: "Unauthorized shop" });
+  try {
+    // Obtener ID interno de la tienda
+    const { data: shopData, error: shopError } = await supabase
+      .from("shops")
+      .select("id")
+      .eq("shop", shop)
+      .single();
+
+    if (shopError || !shopData) {
+      return res.status(404).json({ error: "Shop not found" });
+    }
+
+    // Obtener precio original desde Shopify
+    const price = await getShopifyProductPrice(shop, product_id);
+    if (!price) {
+      return res.status(400).json({ error: "Could not fetch product price" });
+    }
+
+    // Calcular precio con descuento
+    const discounted = (parseFloat(price) * (1 - discount_percentage / 100)).toFixed(2);
+
+    // Insertar campaña
+    const { error } = await supabase.from("campaigns").insert({
+      name,
+      goal,
+      shop_id: shopData.id,
+      product_id,
+      discounted_price: discounted,
+    });
+
+    if (error) {
+      console.error("❌ Error creating campaign:", error);
+      return res.status(500).json({ error: "Failed to create campaign" });
+    }
+
+    return res.status(200).json({ message: "Campaign created" });
+  } catch (err) {
+    console.error("❌ Unexpected error:", err);
+    return res.status(500).json({ error: "Server error" });
   }
-
-  const { error } = await supabase.from("campaigns").insert({
-    name,
-    goal,
-    shop_id: shopId,
-  });
-
-  if (error) {
-    console.error("❌ Error creating campaign:", error);
-    return res.status(500).json({ error: "Failed to create campaign" });
-  }
-
-  return res.status(200).json({ message: "Campaign created successfully" });
 });
 
 // 🧾 Obtener campañas por tienda
