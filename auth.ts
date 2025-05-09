@@ -465,4 +465,43 @@ router.get("/api/campaigns/by-product", async (req, res) => {
   return res.status(200).json(campaign);
 });
 
+router.get("/api/products", async (req, res) => {
+  const { shop, query } = req.query;
+
+  if (!shop || !query || typeof shop !== "string" || typeof query !== "string") {
+    return res.status(400).json({ error: "Missing parameters" });
+  }
+
+  try {
+    const { data: shopData, error } = await supabase
+      .from("shops")
+      .select("access_token")
+      .eq("shop", shop)
+      .single();
+
+    if (error || !shopData) {
+      return res.status(404).json({ error: "Shop not found" });
+    }
+
+    const response = await fetch(`https://${shop}/admin/api/2023-10/products.json?title=${query}`, {
+      headers: {
+        "X-Shopify-Access-Token": shopData.access_token,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const json = await response.json();
+
+    const products = json.products?.map((p: any) => ({
+      id: p.id,
+      title: p.title,
+    })) || [];
+
+    return res.json(products);
+  } catch (err) {
+    console.error("❌ Error fetching products:", err);
+    return res.status(500).json({ error: "Failed to fetch products" });
+  }
+});
+
 export default router;
